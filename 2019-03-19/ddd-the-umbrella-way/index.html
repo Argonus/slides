@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Warsaw.ex - Ecto & PostGiS</title>
+
+  <meta name="description" content="">
+  <meta name="author" content="warsaw.ex">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, use-scalable=no">
+
+  <link rel="stylesheet" href="vendors/reveal.js-3.7.0/css/reveal.css">
+  <link rel="stylesheet" href="vendors/warsawex/styles/violet-dark.css" id="theme">
+  <link rel="stylesheet" href="vendors/reveal.js-3.7.0/lib/css/zenburn.css">
+</head>
+
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section data-background="vendors/warsawex/images/wallpaper.png">
+      </section>
+
+      <section>
+        <h1>DDD in Elixir</h1>
+        <h3>The Umbrella Way</h3>
+        <h5>19-03-2019</h5>
+      </section>
+
+      <section>
+        <h2>About Me</h2>
+        <!-- 1. Photo or avatar -->
+        <img src="images/piotr.jpg" width="200" height="200" />
+
+        <!-- 2. Name -->
+        <h3>Piotr Rybarczyk</h3>
+        <h4><a href="https://github.com/Argonus">github</a></h4>
+
+        <!-- 3. Bio -->
+        <p>Just ex-geodesy student, who become programmer. As hobby... base stuff like coding,
+           playing games and listen to music. Sometimes swimming and skiing. </p>
+      </section>
+
+      <section>
+        <section>
+          <h2>What is <strong>DDD</strong>?</h2>
+          <p>First of all, its not about Elixir, or any programming language, is way you think & design your code complexity.</p>
+          <p>In this approach, we focus mainly on the domain model.</p>
+        </section>
+
+        <section>
+          <h2>Why we need it here?</h2>
+          <p>
+            In basic project we don't need it at all, but as soon as our project start grow,
+            and receive new features from multiple domains we can start thinking about implementing DDD.
+          </p>
+        </section>
+
+        <section>
+          <h4>This gives as similar benefits as SOLID but on Application Architecture level</h4>
+
+          <ul>
+            <li>Easier to apply <strong>Ubiquitous language</strong> - for me, right now it's game changer</li>
+            <li>Easier to focus on consumer problem - thanks to <strong>sub domains</strong></li>
+            <li>Better collaboration between team members - thanks to both above</li>
+            <li>Easier to maintain code - thanks to low coupling, high cohesion between <strong>bounded contexts</strong></li>
+            <li>...</li>
+          </ul>
+        </section>
+      </section>
+
+      <section>
+        <section>
+          <h2>What are <strong>domain, sub-domain and bounded contexts</strong>?</h2>
+          <ul>
+            <li>Domain - it's a problem space, which should be resolved by software.</li>
+            <li>Sub Domain - part of domain, which has it's own organizational boundaries.</li>
+            <li>Bounded Context - ideally one-to-one to SubDomain, its our solution space. Code lives here.</li>
+          </ul>
+        </section>
+      </section>
+
+      <section>
+        <section>
+          <h2><strong>The Umbrella</strong>?</h2>
+          <p>This is way we can manage internal dependencies of our application. And also it can be part of our DDD architecure overall</p>
+
+
+        </section>
+
+        <section>
+          <h2>Pros</h2>
+          <p>It's allows use to use our internal dependencies as deps.</p>
+          <p>Easy separation & grouping apps, dependencies and even run times</p>
+          <p>Unified configuration & dependencies version</p>
+        </section>
+
+        <section>
+          <h2>Cons</h2>
+          <p>Unified configuration & dependencies version</p>
+          <p>Configuration can be tricky</p>
+          <p>Can be problematic in deployment</p>
+        </section>
+      </section>
+
+      <section>
+        <h2>Where it comes together?</h2>
+
+        <img src="images/shop-domain.png" width="800" height="500" />
+      </section>
+
+      <section>
+        <section>
+          <h2>Core Domain Setup</h2>
+
+          <pre>
+          <code class="hljs bash">
+            $ mix new shop --umbrella
+            * creating README.md
+            * creating .formatter.exs
+            * creating .gitignore
+            * creating mix.exs
+            * creating apps
+            * creating config
+            * creating config/config.exs
+          </code>
+        </pre>
+        </section>
+        <section>
+          <h2>Bounded Context Setup</h2>
+
+          <pre>
+            <code class="hljs bash">
+              $ mix new sales
+              * creating README.md
+              * creating .formatter.exs
+              * creating .gitignore
+              * creating mix.exs
+              * creating config
+              * creating config/config.exs
+              * creating lib
+              * creating lib/sales.ex
+              * creating test
+              * creating test/test_helper.exs
+              * creating test/sales.exs
+            </code>
+          </pre>
+        </section>
+      </section>
+
+      <section>
+        <h2>Code Architecture</h2>
+
+        <img src="images/shop-code-domain.png" width="800" height="500" />
+      </section>
+
+      <section>
+        <h3>Dependencies Management</h3>
+
+        <pre>
+            <code class="hljs elixir">
+              # defmodule Sales.MixProject do
+
+              defp deps do
+                [
+                  {:payments, in_umbrella: true},
+                  {:product_catalog, in_umbrella: true},
+                ]
+              end
+            </code>
+          </pre>
+      </section>
+
+      <section>
+        <h3>Validate Sale</h3>
+
+        <pre>
+            <code class="hljs elixir">
+              # defmodule Sale do
+
+              def validate_sale(product_id, quantity, payment_method) do
+                with :ok <- check_product_availability(product_id, quantity),
+                     :ok <- validate_payment_method(payment_method) do
+                  sale =
+                    product_id
+                    |> build_sale_item(quantity)
+                    |> build_sale(payment_method)
+
+                  {:ok, sale}
+                else
+                  {:error, _} -> :error
+                end
+              end
+
+              defp check_product_availability(product_id, quantity) do
+                ProductCatalog.check_availability(product_id, quantity)
+              end
+
+              defp validate_payment_method(payment_method) do
+                Payments.validate_payment_method(payment_method)
+              end
+            </code>
+          </pre>
+      </section>
+
+
+      <section>
+        <h3>Adding some web interface</h3>
+
+        <pre>
+            <code class="hljs bash">
+              $ mix phx.new marketplace --umbrella
+              ...
+              * creating shop_phx_umbrella/apps/marketplace_web/.
+              * creating shop_phx_umbrella/apps/marketplace/.
+            </code>
+          </pre>
+      </section>
+
+      <section>
+        <h3>Merging this together</h3>
+
+        <img src="images/umbrella_phx.png" width="800" height="500" />
+      </section>
+
+      <section>
+        <h2>Other Solutions?</h2>
+        <p>Phoenix Contexts</p>
+        <p>Elixir external dependencies</p>
+      </section>
+
+  <script src="vendors/reveal.js-3.7.0/lib/js/head.min.js"></script>
+  <script src="vendors/reveal.js-3.7.0/js/reveal.js"></script>
+  <script>
+    Reveal.initialize({
+      controls: true,
+      progress: true,
+      history: true,
+      center: true,
+      transition: 'slide',
+      dependencies: [
+        // { src: 'lib/js/classList.js', condition: function () { return !document.body.classList; } },
+        // { src: 'plugin/markdown/marked.js', condition: function () { return !!document.querySelector('[data-markdown]'); } },
+        // { src: 'plugin/markdown/markdown.js', condition: function () { return !!document.querySelector('[data-markdown]'); } },
+        { src: 'vendors/reveal.js-3.7.0/plugin/highlight/highlight.js', async: true, callback: function () { hljs.initHighlightingOnLoad(); } },
+        // { src: 'plugin/search/search.js', async: true },
+        // { src: 'plugin/zoom-js/zoom.js', async: true },
+        // { src: 'plugin/notes/notes.js', async: true }
+      ],
+    });
+  </script>
+  <script>
+    (function () {
+      var nodes = document.querySelectorAll('[data-theme-switch]');
+      for (var i = 0; i < nodes.length; i += 1) {
+        nodes.item(i).addEventListener('click', function (event) {
+          event.preventDefault();
+          const themeName = event.target.getAttribute('data-theme');
+          document.getElementById('theme').setAttribute('href', 'vendors/warsawex/styles/' + themeName + '.css');
+        });
+      }
+    })();
+  </script>
+</body>
+
+</html>
